@@ -2,7 +2,7 @@ services:
 
   # ==========================================================
   # LOCALSTACK
-  # AWS-compatible local infrastructure
+  # AWS S3-compatible local storage
   # ==========================================================
 
   localstack:
@@ -13,13 +13,14 @@ services:
       - "4566:4566"
 
     environment:
-      SERVICES: s3,glue
+      SERVICES: s3
       DEBUG: "0"
       PERSISTENCE: "1"
       AWS_DEFAULT_REGION: us-east-1
 
     volumes:
       - localstack_data:/var/lib/localstack
+      - ./localstack/init:/etc/localstack/init/ready.d
       - /var/run/docker.sock:/var/run/docker.sock
 
     networks:
@@ -58,13 +59,15 @@ services:
 
 
   # ==========================================================
-  # AIRFLOW INIT
+  # AIRFLOW 3 INIT
   # ==========================================================
 
   airflow-init:
     build:
       context: ./airflow
       dockerfile: Dockerfile
+
+    container_name: osint-airflow-init
 
     depends_on:
       postgres:
@@ -93,16 +96,16 @@ services:
       - |
         set -e
 
-        echo "=== Airflow version ==="
-        airflow version
+        echo "======================================"
+        echo "Airflow database migration"
+        echo "======================================"
 
-        echo "=== Auth manager ==="
-        airflow config get-value core auth_manager
-
-        echo "=== Migrating database ==="
         airflow db migrate
 
-        echo "=== Creating admin user ==="
+        echo "======================================"
+        echo "Creating admin user"
+        echo "======================================"
+
         airflow users create \
           --username ${AIRFLOW_USER} \
           --password ${AIRFLOW_PASSWORD} \
@@ -111,12 +114,16 @@ services:
           --role Admin \
           --email admin@example.com || true
 
-        echo "=== Initialization complete ==="
+        echo "======================================"
+        echo "Airflow initialization complete"
+        echo "======================================"
 
     networks:
       - osint
+
+
   # ==========================================================
-  # AIRFLOW API SERVER
+  # AIRFLOW 3 API SERVER
   # ==========================================================
 
   airflow-apiserver:
@@ -149,13 +156,15 @@ services:
     ports:
       - "8081:8080"
 
-    command: api-server
+    command:
+      - api-server
 
     networks:
       - osint
 
+
   # ==========================================================
-  # AIRFLOW SCHEDULER
+  # AIRFLOW 3 SCHEDULER
   # ==========================================================
 
   airflow-scheduler:
@@ -185,14 +194,54 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
 
-    command: scheduler
+    command:
+      - scheduler
 
     networks:
       - osint
 
+
   # ==========================================================
-  # APACHE KAFKA
-  # KRaft mode: no Zookeeper
+  # AIRFLOW 3 DAG PROCESSOR
+  # ==========================================================
+
+  airflow-dag-processor:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+
+    container_name: osint-airflow-dag-processor
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+    command:
+      - dag-processor
+
+    networks:
+      - osint
+
+
+  # ==========================================================
+  # APACHE KAFKA 4
+  # KRaft - no ZooKeeper
   # ==========================================================
 
   kafka:
@@ -205,11 +254,10 @@ services:
 
     environment:
 
-      # KRaft
       KAFKA_NODE_ID: 1
+
       KAFKA_PROCESS_ROLES: broker,controller
 
-      # Internal Docker listener + external host listener
       KAFKA_LISTENERS: >-
         PLAINTEXT://0.0.0.0:9092,
         EXTERNAL://0.0.0.0:29092,
@@ -230,7 +278,6 @@ services:
 
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
 
-      # Single-node development settings
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -253,6 +300,7 @@ services:
   # ==========================================================
   # APACHE SPARK MASTER
   # ==========================================================
+
   spark-master:
     image: apache/spark:4.0.4
     container_name: osint-spark-master
@@ -305,6 +353,8 @@ services:
 
     networks:
       - osint
+
+
 # ==========================================================
 # NETWORK
 # ==========================================================
