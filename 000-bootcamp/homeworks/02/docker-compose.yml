@@ -1,0 +1,188 @@
+services:
+  # ==========================================================
+  # KESTRA POSTGRES
+  # ==========================================================
+
+  kestra_postgres:
+    image: postgres:18
+    volumes:
+      - kestra_postgres_data:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: ${KESTRA_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${KESTRA_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${KESTRA_POSTGRES_DB}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${KESTRA_POSTGRES_USER} -d ${KESTRA_POSTGRES_DB}"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+    networks:
+      - homework
+
+  # ==========================================================
+  # KESTRA
+  # ==========================================================
+
+  kestra:
+    image: kestra/kestra:v1.1
+    pull_policy: always
+    # Note that this setup with a root user is intended for development purpose.
+    # Our base image runs without root, but the Docker Compose implementation needs root to access the Docker socket
+    # To run Kestra in a rootless mode in production, see: https://kestra.io/docs/installation/podman-compose
+    user: "root"
+    command: server standalone
+    volumes:
+      - kestra_data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - kestra_tmp:/tmp/kestra-wd
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://kestra_postgres:5432/${KESTRA_POSTGRES_DB}
+            driverClassName: org.postgresql.Driver
+            username: ${KESTRA_POSTGRES_USER}
+            password: ${KESTRA_POSTGRES_PASSWORD}
+        kestra:
+          server:
+            basicAuth:
+              username: ${KESTRA_USERNAME}
+              password: ${KESTRA_PASSWORD}
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              basePath: "/app/storage"
+          queue:
+            type: postgres
+          tasks:
+            tmpDir:
+              path: /tmp/kestra-wd/tmp
+          url: http://localhost:8080/
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      kestra_postgres:
+        condition: service_started
+
+    networks:
+      - homework
+
+  # ==========================================================
+  # POSTGRES
+  # Homework database
+  # ==========================================================
+
+  postgres:
+    image: postgres:18
+    container_name: homework-postgres
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+    networks:
+      - homework
+
+    depends_on:
+      kestra:
+        condition: service_started
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  # ==========================================================
+  # PGADMIN
+  # ==========================================================
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8082:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+    networks:
+      - homework
+
+  # # ==========================================================
+  # # MODULE FOLLOW
+  # # ==========================================================
+
+  # module_2_pipeline_0:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+
+  #     args:
+  #       SCRIPT: pipeline_00.py
+  #       FILES: "config_yellow_trip.py loader_yellow_trip.py"
+
+  #   container_name: module_1_0
+
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_HOST: postgres
+  #     POSTGRES_PORT: ${POSTGRES_PORT}
+
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  #   networks:
+  #     - homework
+
+  # # ==========================================================
+  # # HOMEWORKS
+  # # ==========================================================
+
+# ==========================================================
+# NETWORK
+# ==========================================================
+
+networks:
+  homework:
+    driver: bridge
+
+
+# ==========================================================
+# PERSISTENT VOLUMES
+# ==========================================================
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  kestra_postgres_data:
+  kestra_data:
+  kestra_tmp:

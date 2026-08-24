@@ -23,4 +23,3 @@ def load_green_trips():
 
   for df_chunk in tqdm(df_iter, desc="Reading"):
     process_chunk(engine, df_chunk, table_name)
-

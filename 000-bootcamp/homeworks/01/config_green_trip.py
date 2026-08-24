@@ -34,4 +34,3 @@ parse_dates = [
 
 source = 'https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-11.parquet'
 table_name = 'green_trip_data'
-
