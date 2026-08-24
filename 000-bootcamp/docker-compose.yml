@@ -1,0 +1,324 @@
+services:
+
+  # ==========================================================
+  # LOCALSTACK
+  # AWS-compatible local infrastructure
+  # ==========================================================
+
+  localstack:
+    image: localstack/localstack:4.10
+    container_name: osint-localstack
+
+    ports:
+      - "4566:4566"
+
+    environment:
+      SERVICES: s3,glue
+      DEBUG: "0"
+      PERSISTENCE: "1"
+      AWS_DEFAULT_REGION: us-east-1
+
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      - osint
+
+
+  # ==========================================================
+  # POSTGRES
+  # Airflow metadata database
+  # ==========================================================
+
+  postgres:
+    image: postgres:16
+    container_name: osint-postgres
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - osint
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  # ==========================================================
+  # AIRFLOW INIT
+  # ==========================================================
+
+  airflow-init:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+    entrypoint: /bin/bash
+
+    command:
+      - -c
+      - |
+        set -e
+
+        echo "=== Airflow version ==="
+        airflow version
+
+        echo "=== Auth manager ==="
+        airflow config get-value core auth_manager
+
+        echo "=== Migrating database ==="
+        airflow db migrate
+
+        echo "=== Creating admin user ==="
+        airflow users create \
+          --username ${AIRFLOW_USER} \
+          --password ${AIRFLOW_PASSWORD} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true
+
+        echo "=== Initialization complete ==="
+
+    networks:
+      - osint
+  # ==========================================================
+  # AIRFLOW API SERVER
+  # ==========================================================
+
+  airflow-apiserver:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+
+    container_name: osint-airflow
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+    ports:
+      - "8081:8080"
+
+    command: api-server
+
+    networks:
+      - osint
+
+  # ==========================================================
+  # AIRFLOW SCHEDULER
+  # ==========================================================
+
+  airflow-scheduler:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+
+    container_name: osint-airflow-scheduler
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+    command: scheduler
+
+    networks:
+      - osint
+
+  # ==========================================================
+  # APACHE KAFKA
+  # KRaft mode: no Zookeeper
+  # ==========================================================
+
+  kafka:
+    image: apache/kafka:4.0.2
+    container_name: osint-kafka
+
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+
+    environment:
+
+      # KRaft
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # Internal Docker listener + external host listener
+      KAFKA_LISTENERS: >-
+        PLAINTEXT://0.0.0.0:9092,
+        EXTERNAL://0.0.0.0:29092,
+        CONTROLLER://0.0.0.0:9093
+
+      KAFKA_ADVERTISED_LISTENERS: >-
+        PLAINTEXT://kafka:9092,
+        EXTERNAL://localhost:29092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >-
+        PLAINTEXT:PLAINTEXT,
+        EXTERNAL:PLAINTEXT,
+        CONTROLLER:PLAINTEXT
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # Single-node development settings
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      KAFKA_NUM_PARTITIONS: 3
+
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+
+    networks:
+      - osint
+
+
+  # ==========================================================
+  # APACHE SPARK MASTER
+  # ==========================================================
+  spark-master:
+    image: apache/spark:4.0.4
+    container_name: osint-spark-master
+
+    command:
+      - /bin/bash
+      - -c
+      - |
+        /opt/spark/sbin/start-master.sh
+        tail -f /dev/null
+
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+
+    volumes:
+      - ./spark/jobs:/opt/spark/jobs
+
+    networks:
+      - osint
+
+
+  # ==========================================================
+  # APACHE SPARK WORKER
+  # ==========================================================
+
+  spark-worker:
+    image: apache/spark:4.0.4
+    container_name: osint-spark-worker
+
+    depends_on:
+      - spark-master
+
+    command:
+      - /bin/bash
+      - -c
+      - |
+        /opt/spark/sbin/start-worker.sh spark://spark-master:7077
+        tail -f /dev/null
+
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2G
+
+    ports:
+      - "8082:8081"
+
+    volumes:
+      - ./spark/jobs:/opt/spark/jobs
+
+    networks:
+      - osint
+# ==========================================================
+# NETWORK
+# ==========================================================
+
+networks:
+  osint:
+    driver: bridge
+
+
+# ==========================================================
+# PERSISTENT VOLUMES
+# ==========================================================
+
+volumes:
+  localstack_data:
+  postgres_data:
+  kafka_data:
