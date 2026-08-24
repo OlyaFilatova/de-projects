@@ -9,6 +9,7 @@ dependencies = [
   "psycopg[binary,pool]>=3.3.4",
   "pyarrow>=25.0.1",
   "python-dotenv>=1.2.3",
+  "requests>=2.34.2",
   "sqlalchemy>=2.0.52",
   "tqdm>=4.70.0",
 ]

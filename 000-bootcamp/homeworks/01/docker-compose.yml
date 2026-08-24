@@ -54,106 +54,146 @@ services:
     networks:
       - homework
 
-  # # ==========================================================
-  # # HOMEWORKS
-  # # ==========================================================
+  # ==========================================================
+  # MODULE FOLLOW
+  # ==========================================================
 
-  # module_1_pipeline_1:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
+  module_1_pipeline_0:
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-  #     args:
-  #       SCRIPT: pipeline_01.py
-  #       FILES: "config_yellow_taxi.py"
+      args:
+        SCRIPT: pipeline_00.py
+        FILES: "config_yellow_trip.py loader_yellow_trip.py"
 
-  #   container_name: homework_1_1
+    container_name: module_1_0
 
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_HOST: postgres
-  #     POSTGRES_PORT: ${POSTGRES_PORT}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT}
 
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  #   networks:
-  #     - homework
+    networks:
+      - homework
 
-  # module_1_pipeline_2:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
+  # ==========================================================
+  # HOMEWORKS
+  # ==========================================================
 
-  #     args:
-  #       SCRIPT: pipeline_02.py
+  module_1_pipeline_1:
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-  #   container_name: homework_1_2
+      args:
+        SCRIPT: pipeline_01.py
+        FILES: "config_green_trip.py loader_green_trip.py"
 
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_HOST: postgres
-  #     POSTGRES_PORT: ${POSTGRES_PORT}
+    container_name: homework_1_1
 
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT}
 
-  #   networks:
-  #     - homework
+    depends_on:
+      postgres:
+        condition: service_healthy
+      module_1_pipeline_0:
+        condition: service_completed_successfully
 
-  # module_1_pipeline_3:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
+    networks:
+      - homework
 
-  #     args:
-  #       SCRIPT: pipeline_03.py
+  module_1_pipeline_2:
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-  #   container_name: homework_1_3
+      args:
+        SCRIPT: pipeline_02.py
+        FILES: "config_green_trip.py loader_green_trip.py"
 
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_HOST: postgres
-  #     POSTGRES_PORT: ${POSTGRES_PORT}
+    container_name: homework_1_2
 
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT}
 
-  #   networks:
-  #     - homework
+    depends_on:
+      postgres:
+        condition: service_healthy
+      module_1_pipeline_1:
+        condition: service_completed_successfully
 
-  # module_1_pipeline_4:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
+    networks:
+      - homework
 
-  #     args:
-  #       SCRIPT: pipeline_04.py
+  module_1_pipeline_3:
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-  #   container_name: homework_1_4
+      args:
+        SCRIPT: pipeline_03.py
+        FILES: "config_green_trip.py loader_green_trip.py config_taxi_zone.py loader_taxi_zone.py"
 
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_HOST: postgres
-  #     POSTGRES_PORT: ${POSTGRES_PORT}
+    container_name: homework_1_3
 
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT}
 
-  #   networks:
-  #     - homework
+    depends_on:
+      postgres:
+        condition: service_healthy
+      module_1_pipeline_2:
+        condition: service_completed_successfully
+
+    networks:
+      - homework
+
+  module_1_pipeline_4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+      args:
+        SCRIPT: pipeline_04.py
+        FILES: "config_green_trip.py loader_green_trip.py config_taxi_zone.py loader_taxi_zone.py"
+
+    container_name: homework_1_4
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      module_1_pipeline_3:
+        condition: service_completed_successfully
+
+    networks:
+      - homework
 # ==========================================================
 # NETWORK
 # ==========================================================
