@@ -1,0 +1,172 @@
+services:
+  # ==========================================================
+  # POSTGRES
+  # Homework database
+  # ==========================================================
+
+  postgres:
+    image: postgres:16
+    container_name: homework-postgres
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - homework
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ==========================================================
+  # PGADMIN
+  # ==========================================================
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+    networks:
+      - homework
+
+  # # ==========================================================
+  # # HOMEWORKS
+  # # ==========================================================
+
+  # module_1_pipeline_1:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+
+  #     args:
+  #       SCRIPT: pipeline_01.py
+  #       FILES: "config_yellow_taxi.py"
+
+  #   container_name: homework_1_1
+
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_HOST: postgres
+  #     POSTGRES_PORT: ${POSTGRES_PORT}
+
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  #   networks:
+  #     - homework
+
+  # module_1_pipeline_2:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+
+  #     args:
+  #       SCRIPT: pipeline_02.py
+
+  #   container_name: homework_1_2
+
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_HOST: postgres
+  #     POSTGRES_PORT: ${POSTGRES_PORT}
+
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  #   networks:
+  #     - homework
+
+  # module_1_pipeline_3:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+
+  #     args:
+  #       SCRIPT: pipeline_03.py
+
+  #   container_name: homework_1_3
+
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_HOST: postgres
+  #     POSTGRES_PORT: ${POSTGRES_PORT}
+
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  #   networks:
+  #     - homework
+
+  # module_1_pipeline_4:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+
+  #     args:
+  #       SCRIPT: pipeline_04.py
+
+  #   container_name: homework_1_4
+
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_HOST: postgres
+  #     POSTGRES_PORT: ${POSTGRES_PORT}
+
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  #   networks:
+  #     - homework
+# ==========================================================
+# NETWORK
+# ==========================================================
+
+networks:
+  homework:
+    driver: bridge
+
+
+# ==========================================================
+# PERSISTENT VOLUMES
+# ==========================================================
+
+volumes:
+  postgres_data:
+  pgadmin_data:

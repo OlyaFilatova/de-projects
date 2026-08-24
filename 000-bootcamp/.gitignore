@@ -1,3 +1,5 @@
 .suggestions
 .env
 .terraform
+.data
+__pycache__
