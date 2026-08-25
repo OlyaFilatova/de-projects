@@ -46,7 +46,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
     networks:
-      - homework
+      homework:
+        aliases:
+          - localhost.localstack.cloud
 
 
   # ==========================================================
@@ -73,7 +75,7 @@ services:
       ENV_POSTGRES_PORT: ${POSTGRES_PORT}
       ENV_AWS_ACCESS_KEY_ID: ${SECRET_AWS_ACCESS_KEY_ID}
       ENV_AWS_SECRET_KEY_ID: ${SECRET_AWS_SECRET_KEY_ID}
-      ENV_AWS_ENDPOINT: 'http://dezm2_localstack:4566'
+      ENV_AWS_ENDPOINT: 'http://localhost.localstack.cloud:4566'
       KESTRA_CONFIGURATION: |
         datasources:
           postgres:

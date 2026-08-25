@@ -40,17 +40,29 @@ tasks:
       type: io.kestra.plugin.core.runner.Process
     commands:
       - wget -qO- https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{{inputs.taxi}}/{{render(vars.file)}}.gz | gunzip > {{render(vars.file)}}
-  
-  # TODO: fix s3 LocalStack connection. URL is not accepted.
+
   - id: upload_to_s3
     type: io.kestra.plugin.aws.s3.Upload
     endpointOverride: "{{envs.aws_endpoint}}"
+    stsEndpointOverride: "{{envs.aws_endpoint}}"
     forcePathStyle: true
+    compatibilityMode: true
     accessKeyId: "{{envs.aws_access_key_id}}"
     secretKeyId: "{{envs.aws_secret_key_id}}"
     region: "{{kv('BUCKET_REGION')}}"
     bucket: "{{kv('BUCKET_NAME')}}"
     from: "{{render(vars.data)}}"
+    key: "{{render(vars.file)}}"
+
+  - id: download_from_s3
+    type: io.kestra.plugin.aws.s3.Download
+    endpointOverride: "{{envs.aws_endpoint}}"
+    forcePathStyle: true
+    compatibilityMode: true
+    accessKeyId: "{{envs.aws_access_key_id}}"
+    secretKeyId: "{{envs.aws_secret_key_id}}"
+    region: "{{kv('BUCKET_REGION')}}"
+    bucket: "{{kv('BUCKET_NAME')}}"
     key: "{{render(vars.file)}}"
 
   - id: if_yellow_taxi
@@ -60,8 +72,9 @@ tasks:
       - id: duckdb_yellow_tripdata
         type: io.kestra.plugin.jdbc.duckdb.Queries
         url: "jdbc:duckdb:/tmp/tripdata.duckdb"
+        fetchType: FETCH
         inputFiles:
-          yellow_tripdata.csv: "{{ render(vars.s3_file) }}"
+          yellow_tripdata.csv: "{{ outputs.download_from_s3.uri }}"
         sql: |
           CREATE TABLE IF NOT EXISTS yellow_tripdata (
               unique_row_id VARCHAR,
@@ -99,7 +112,7 @@ tasks:
             ) AS unique_row_id,
             '{{ render(vars.file) }}' AS filename,
             *
-          FROM read_csv(
+          FROM read_csv_auto(
             'yellow_tripdata.csv',
             header = true,
             auto_detect = true,
@@ -123,28 +136,30 @@ tasks:
         type: io.kestra.plugin.jdbc.duckdb.Queries
         url: "jdbc:duckdb:/tmp/tripdata.duckdb"
         inputFiles:
-          green_tripdata.csv: "{{ render(vars.s3_file) }}"
+          green_tripdata.csv: "{{ outputs.download_from_s3.uri }}"
         sql: |
           CREATE TABLE IF NOT EXISTS green_tripdata (
               unique_row_id VARCHAR,
               filename VARCHAR,
               VendorID VARCHAR,
-              tpep_pickup_datetime TIMESTAMP,
-              tpep_dropoff_datetime TIMESTAMP,
-              passenger_count INTEGER,
-              trip_distance DECIMAL(18,3),
-              RatecodeID VARCHAR,
+              lpep_pickup_datetime TIMESTAMP,
+              lpep_dropoff_datetime TIMESTAMP,
               store_and_fwd_flag VARCHAR,
+              RatecodeID VARCHAR,
               PULocationID VARCHAR,
               DOLocationID VARCHAR,
-              payment_type INTEGER,
+              passenger_count INTEGER,
+              trip_distance DECIMAL(18,3),
               fare_amount DECIMAL(18,3),
               extra DECIMAL(18,3),
               mta_tax DECIMAL(18,3),
               tip_amount DECIMAL(18,3),
               tolls_amount DECIMAL(18,3),
+              ehail_fee DECIMAL(18,3),
               improvement_surcharge DECIMAL(18,3),
               total_amount DECIMAL(18,3),
+              payment_type INTEGER,
+              trip_type INTEGER,
               congestion_surcharge DECIMAL(18,3)
           );
 
@@ -153,15 +168,15 @@ tasks:
             md5(
               concat(
                 coalesce(CAST(VendorID AS VARCHAR), ''),
-                coalesce(CAST(tpep_pickup_datetime AS VARCHAR), ''),
-                coalesce(CAST(tpep_dropoff_datetime AS VARCHAR), ''),
+                coalesce(CAST(lpep_pickup_datetime AS VARCHAR), ''),
+                coalesce(CAST(lpep_dropoff_datetime AS VARCHAR), ''),
                 coalesce(CAST(PULocationID AS VARCHAR), ''),
                 coalesce(CAST(DOLocationID AS VARCHAR), '')
               )
             ) AS unique_row_id,
             '{{ render(vars.file) }}' AS filename,
             *
-          FROM read_csv(
+          FROM read_csv_auto(
             'green_tripdata.csv',
             header = true,
             auto_detect = true,
