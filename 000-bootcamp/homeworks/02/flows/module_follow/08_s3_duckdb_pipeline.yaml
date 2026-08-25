@@ -1,0 +1,182 @@
+id: 07_s3_duckdb_pipeline
+namespace: module_follow
+description: Load CSV to s3 and then to duckdb
+
+inputs:
+  - id: taxi
+    type: SELECT
+    displayName: Select taxi type
+    values: [yellow, green]
+    defaults: yellow
+  - id: year
+    type: SELECT
+    displayName: Select year
+    values: ["2019", "2020"]
+    defaults: "2019"
+  - id: month
+    type: SELECT
+    displayName: Select month
+    values: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+    defaults: "01"
+
+variables:
+  file: "{{ inputs.taxi }}_tripdata_{{ inputs.year}}-{{ inputs.month }}.csv"
+  s3_file: "s3://{{ kv('BUCKET_NAME')}}/{{vars.file}}"
+  table: "{{ inputs.taxi }}_tripdata"
+  data: "{{outputs.extract.outputFiles[inputs.taxi ~ '_tripdata_' ~ inputs.year ~ '-' ~ inputs.month ~ '.csv']}}"
+
+tasks:
+  - id: set_label
+    type: io.kestra.plugin.core.execution.Labels
+    labels:
+      file: "{{render(vars.file)}}"
+      taxi: "{{inputs.taxi}}"
+  
+  - id: extract
+    type: io.kestra.plugin.scripts.shell.Commands
+    outputFiles:
+      - "*.csv"
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - wget -qO- https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{{inputs.taxi}}/{{render(vars.file)}}.gz | gunzip > {{render(vars.file)}}
+  
+  # TODO: fix s3 LocalStack connection. URL is not accepted.
+  - id: upload_to_s3
+    type: io.kestra.plugin.aws.s3.Upload
+    endpointOverride: "{{envs.aws_endpoint}}"
+    forcePathStyle: true
+    accessKeyId: "{{envs.aws_access_key_id}}"
+    secretKeyId: "{{envs.aws_secret_key_id}}"
+    region: "{{kv('BUCKET_REGION')}}"
+    bucket: "{{kv('BUCKET_NAME')}}"
+    from: "{{render(vars.data)}}"
+    key: "{{render(vars.file)}}"
+
+  - id: if_yellow_taxi
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ inputs.taxi == 'yellow' }}"
+    then:
+      - id: duckdb_yellow_tripdata
+        type: io.kestra.plugin.jdbc.duckdb.Queries
+        url: "jdbc:duckdb:/tmp/tripdata.duckdb"
+        inputFiles:
+          yellow_tripdata.csv: "{{ render(vars.s3_file) }}"
+        sql: |
+          CREATE TABLE IF NOT EXISTS yellow_tripdata (
+              unique_row_id VARCHAR,
+              filename VARCHAR,
+              VendorID VARCHAR,
+              tpep_pickup_datetime TIMESTAMP,
+              tpep_dropoff_datetime TIMESTAMP,
+              passenger_count INTEGER,
+              trip_distance DECIMAL(18,3),
+              RatecodeID VARCHAR,
+              store_and_fwd_flag VARCHAR,
+              PULocationID VARCHAR,
+              DOLocationID VARCHAR,
+              payment_type INTEGER,
+              fare_amount DECIMAL(18,3),
+              extra DECIMAL(18,3),
+              mta_tax DECIMAL(18,3),
+              tip_amount DECIMAL(18,3),
+              tolls_amount DECIMAL(18,3),
+              improvement_surcharge DECIMAL(18,3),
+              total_amount DECIMAL(18,3),
+              congestion_surcharge DECIMAL(18,3)
+          );
+
+          CREATE OR REPLACE TEMP TABLE yellow_tripdata_stage AS
+          SELECT
+            md5(
+              concat(
+                coalesce(CAST(VendorID AS VARCHAR), ''),
+                coalesce(CAST(tpep_pickup_datetime AS VARCHAR), ''),
+                coalesce(CAST(tpep_dropoff_datetime AS VARCHAR), ''),
+                coalesce(CAST(PULocationID AS VARCHAR), ''),
+                coalesce(CAST(DOLocationID AS VARCHAR), '')
+              )
+            ) AS unique_row_id,
+            '{{ render(vars.file) }}' AS filename,
+            *
+          FROM read_csv(
+            'yellow_tripdata.csv',
+            header = true,
+            auto_detect = true,
+            ignore_errors = true
+          );
+
+          INSERT INTO yellow_tripdata
+          SELECT s.*
+          FROM yellow_tripdata_stage s
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM yellow_tripdata t
+            WHERE t.unique_row_id = s.unique_row_id
+          );
+
+  - id: if_green_taxi
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{inputs.taxi == 'green'}}"
+    then:
+      - id: duckdb_green_tripdata
+        type: io.kestra.plugin.jdbc.duckdb.Queries
+        url: "jdbc:duckdb:/tmp/tripdata.duckdb"
+        inputFiles:
+          green_tripdata.csv: "{{ render(vars.s3_file) }}"
+        sql: |
+          CREATE TABLE IF NOT EXISTS green_tripdata (
+              unique_row_id VARCHAR,
+              filename VARCHAR,
+              VendorID VARCHAR,
+              tpep_pickup_datetime TIMESTAMP,
+              tpep_dropoff_datetime TIMESTAMP,
+              passenger_count INTEGER,
+              trip_distance DECIMAL(18,3),
+              RatecodeID VARCHAR,
+              store_and_fwd_flag VARCHAR,
+              PULocationID VARCHAR,
+              DOLocationID VARCHAR,
+              payment_type INTEGER,
+              fare_amount DECIMAL(18,3),
+              extra DECIMAL(18,3),
+              mta_tax DECIMAL(18,3),
+              tip_amount DECIMAL(18,3),
+              tolls_amount DECIMAL(18,3),
+              improvement_surcharge DECIMAL(18,3),
+              total_amount DECIMAL(18,3),
+              congestion_surcharge DECIMAL(18,3)
+          );
+
+          CREATE OR REPLACE TEMP TABLE green_tripdata_stage AS
+          SELECT
+            md5(
+              concat(
+                coalesce(CAST(VendorID AS VARCHAR), ''),
+                coalesce(CAST(tpep_pickup_datetime AS VARCHAR), ''),
+                coalesce(CAST(tpep_dropoff_datetime AS VARCHAR), ''),
+                coalesce(CAST(PULocationID AS VARCHAR), ''),
+                coalesce(CAST(DOLocationID AS VARCHAR), '')
+              )
+            ) AS unique_row_id,
+            '{{ render(vars.file) }}' AS filename,
+            *
+          FROM read_csv(
+            'green_tripdata.csv',
+            header = true,
+            auto_detect = true,
+            ignore_errors = true
+          );
+
+          INSERT INTO green_tripdata
+          SELECT s.*
+          FROM green_tripdata_stage s
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM green_tripdata t
+            WHERE t.unique_row_id = s.unique_row_id
+          );
+
+  - id: purge_files
+    type: io.kestra.plugin.core.storage.PurgeCurrentExecutionFiles
+    description: This will remove kestra output files.

@@ -4,7 +4,7 @@ services:
   # Homework database
   # ==========================================================
 
-  postgres:
+  dezm1_postgres:
     image: postgres:16
     container_name: homework-postgres
 
@@ -36,7 +36,7 @@ services:
   # PGADMIN
   # ==========================================================
 
-  pgadmin:
+  dezm1_pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
     environment:
@@ -48,7 +48,7 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      - dezm1_postgres
     restart: unless-stopped
 
     networks:
@@ -58,7 +58,7 @@ services:
   # MODULE FOLLOW
   # ==========================================================
 
-  module_1_pipeline_0:
+  dezm1_pipeline_0:
     build:
       context: .
       dockerfile: Dockerfile
@@ -77,7 +77,7 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
     depends_on:
-      postgres:
+      dezm1_postgres:
         condition: service_healthy
 
     networks:
@@ -87,7 +87,7 @@ services:
   # HOMEWORKS
   # ==========================================================
 
-  module_1_pipeline_1:
+  dezm1h_pipeline_1:
     build:
       context: .
       dockerfile: Dockerfile
@@ -106,15 +106,15 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
     depends_on:
-      postgres:
+      dezm1_postgres:
         condition: service_healthy
-      module_1_pipeline_0:
+      dezm1_pipeline_0:
         condition: service_completed_successfully
 
     networks:
       - homework
 
-  module_1_pipeline_2:
+  dezm1h_pipeline_2:
     build:
       context: .
       dockerfile: Dockerfile
@@ -133,15 +133,15 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
     depends_on:
-      postgres:
+      dezm1_postgres:
         condition: service_healthy
-      module_1_pipeline_1:
+      dezm1h_pipeline_1:
         condition: service_completed_successfully
 
     networks:
       - homework
 
-  module_1_pipeline_3:
+  dezm1h_pipeline_3:
     build:
       context: .
       dockerfile: Dockerfile
@@ -160,15 +160,15 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
     depends_on:
-      postgres:
+      dezm1_postgres:
         condition: service_healthy
-      module_1_pipeline_2:
+      dezm1h_pipeline_2:
         condition: service_completed_successfully
 
     networks:
       - homework
 
-  module_1_pipeline_4:
+  dezm1h_pipeline_4:
     build:
       context: .
       dockerfile: Dockerfile
@@ -187,9 +187,9 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
 
     depends_on:
-      postgres:
+      dezm1_postgres:
         condition: service_healthy
-      module_1_pipeline_3:
+      dezm1h_pipeline_3:
         condition: service_completed_successfully
 
     networks:

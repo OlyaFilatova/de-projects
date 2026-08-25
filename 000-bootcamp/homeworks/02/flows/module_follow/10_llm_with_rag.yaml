@@ -1,0 +1,44 @@
+id: 10_chat_with_rag
+namespace: module_follow
+
+description: |
+  Query LLM with RAG.
+
+tasks:
+  - id: ingest_release_notes
+    type: io.kestra.plugin.ai.rag.IngestDocument
+    description: Ingest Kestra 1.1 release notes to create embeddings
+    provider:
+      type: io.kestra.plugin.ai.provider.Ollama
+      modelName: embeddinggemma
+      endpoint: http://host.docker.internal:11434
+    embeddings:
+      type: io.kestra.plugin.ai.embeddings.KestraKVStore
+    drop: true
+    fromExternalUrls:
+      - https://raw.githubusercontent.com/kestra-io/docs/refs/heads/main/src/contents/blogs/release-1-1/index.md
+
+  - id: chat_with_rag
+    type: io.kestra.plugin.ai.rag.ChatCompletion
+    description: Query about Kestra 1.1 features with RAG.
+    chatProvider:
+      type: io.kestra.plugin.ai.provider.Ollama
+      modelName: qwen3:8b
+      endpoint: http://host.docker.internal:11434
+    embeddingProvider:
+      type: io.kestra.plugin.ai.provider.Ollama
+      modelName: embeddinggemma
+      endpoint: http://host.docker.internal:11434
+    embeddings:
+      type: io.kestra.plugin.ai.embeddings.KestraKVStore
+    configuration:
+      thinkingEnabled: true
+      returnThinking: true
+    prompt: |
+      Which features were released in Kestra 1.1?
+      Please list at least 5 major feature with brief descriptions.
+  
+  - id: log_results
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Reponse with RAG: {{ outputs.chat_with_rag.textOutput }}

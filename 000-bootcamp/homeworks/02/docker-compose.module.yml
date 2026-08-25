@@ -3,7 +3,7 @@ services:
   # KESTRA POSTGRES
   # ==========================================================
 
-  kestra_postgres:
+  dezm2_kestra_postgres:
     image: postgres:18
     volumes:
       - kestra_postgres_data:/var/lib/postgresql
@@ -11,6 +11,10 @@ services:
       POSTGRES_USER: ${KESTRA_POSTGRES_USER}
       POSTGRES_PASSWORD: ${KESTRA_POSTGRES_PASSWORD}
       POSTGRES_DB: ${KESTRA_POSTGRES_DB}
+    
+    ports:
+      - "5433:5432"
+
     healthcheck:
       test:
         [
@@ -24,11 +28,32 @@ services:
     networks:
       - homework
 
+  dezm2_localstack:
+    image: localstack/localstack:4.10
+
+    ports:
+      - "4566:4566"
+
+    environment:
+      SERVICES: s3
+      DEBUG: "0"
+      PERSISTENCE: "1"
+      AWS_DEFAULT_REGION: us-east-1
+
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./localstack/init:/etc/localstack/init/ready.d
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      - homework
+
+
   # ==========================================================
   # KESTRA
   # ==========================================================
 
-  kestra:
+  dezm2_kestra:
     image: kestra/kestra:v1.1
     pull_policy: always
     # Note that this setup with a root user is intended for development purpose.
@@ -41,14 +66,24 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - kestra_tmp:/tmp/kestra-wd
     environment:
+      ENV_POSTGRES_USER: ${POSTGRES_USER}
+      ENV_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ENV_POSTGRES_DB: ${POSTGRES_DB}
+      ENV_POSTGRES_HOST: dezm2_postgres
+      ENV_POSTGRES_PORT: ${POSTGRES_PORT}
+      ENV_AWS_ACCESS_KEY_ID: ${SECRET_AWS_ACCESS_KEY_ID}
+      ENV_AWS_SECRET_KEY_ID: ${SECRET_AWS_SECRET_KEY_ID}
+      ENV_AWS_ENDPOINT: 'http://dezm2_localstack:4566'
       KESTRA_CONFIGURATION: |
         datasources:
           postgres:
-            url: jdbc:postgresql://kestra_postgres:5432/${KESTRA_POSTGRES_DB}
+            url: jdbc:postgresql://dezm2_kestra_postgres:5432/${KESTRA_POSTGRES_DB}
             driverClassName: org.postgresql.Driver
             username: ${KESTRA_POSTGRES_USER}
             password: ${KESTRA_POSTGRES_PASSWORD}
         kestra:
+          variables:
+            env-vars-prefix: "ENV_"
           server:
             basicAuth:
               username: ${KESTRA_USERNAME}
@@ -69,7 +104,7 @@ services:
       - "8080:8080"
       - "8081:8081"
     depends_on:
-      kestra_postgres:
+      dezm2_kestra_postgres:
         condition: service_started
 
     networks:
@@ -80,9 +115,8 @@ services:
   # Homework database
   # ==========================================================
 
-  postgres:
+  dezm2_postgres:
     image: postgres:18
-    container_name: homework-postgres
 
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -99,7 +133,7 @@ services:
       - homework
 
     depends_on:
-      kestra:
+      dezm2_kestra:
         condition: service_started
 
     healthcheck:
@@ -116,9 +150,8 @@ services:
   # PGADMIN
   # ==========================================================
 
-  pgadmin:
+  dezm2_pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
@@ -128,44 +161,11 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      - dezm2_postgres
     restart: unless-stopped
 
     networks:
       - homework
-
-  # # ==========================================================
-  # # MODULE FOLLOW
-  # # ==========================================================
-
-  # module_2_pipeline_0:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-
-  #     args:
-  #       SCRIPT: pipeline_00.py
-  #       FILES: "config_yellow_trip.py loader_yellow_trip.py"
-
-  #   container_name: module_1_0
-
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_HOST: postgres
-  #     POSTGRES_PORT: ${POSTGRES_PORT}
-
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-
-  #   networks:
-  #     - homework
-
-  # # ==========================================================
-  # # HOMEWORKS
-  # # ==========================================================
 
 # ==========================================================
 # NETWORK
@@ -186,3 +186,4 @@ volumes:
   kestra_postgres_data:
   kestra_data:
   kestra_tmp:
+  localstack_data:

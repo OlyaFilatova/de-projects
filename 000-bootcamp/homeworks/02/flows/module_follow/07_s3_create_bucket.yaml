@@ -1,0 +1,14 @@
+# TODO: fix s3 LocalStack connection. URL is not accepted.
+id: 06_setup_s3
+namespace: module_follow
+
+tasks:
+  - id: create_aws_bucket
+    type: io.kestra.plugin.aws.s3.CreateBucket
+    ifExists: SKIP
+    endpointOverride: "{{envs.aws_endpoint}}"
+    accessKeyId: "{{envs.aws_access_key_id}}"
+    secretKeyId: "{{envs.aws_secret_key_id}}"
+    bucket: "{{kv('BUCKET_NAME')}}"
+    region: "{{kv('BUCKET_REGION')}}"
+    forcePathStyle: true

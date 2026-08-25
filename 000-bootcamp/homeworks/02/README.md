@@ -1,4 +1,23 @@
+## Module follow (Kestra)
+
+`docker compose -f docker-compose.module.yml up`
+
+```sh
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/01_hello_world.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/02_python.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/03_data_pipeline.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/04_postgres.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/05_scheduled.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/06_key_value.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/07_s3_create_bucket.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/08_s3_duckdb_pipeline.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/09_llm.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/module_follow/10_llm_with_rag.yaml
+```
+
 ## Module 2 Homework
+
+`docker compose -f docker-compose.homework.yml up`
 
 `https://github.com/DataTalksClub/nyc-tlc-data/releases/tag/green/download`
 

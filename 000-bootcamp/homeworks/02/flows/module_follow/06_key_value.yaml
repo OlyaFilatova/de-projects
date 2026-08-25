@@ -1,0 +1,15 @@
+id: 06_key_value
+namespace: module_follow
+
+tasks:
+  - id: set_bucket_name
+    type: io.kestra.plugin.core.kv.Set
+    key: BUCKET_NAME
+    kvType: STRING
+    value: "bucket1"
+
+  - id: set_bucket_region
+    type: io.kestra.plugin.core.kv.Set
+    key: BUCKET_REGION
+    kvType: STRING
+    value: "eu-central-1"

@@ -1,40 +1,10 @@
 services:
-
-  # ==========================================================
-  # LOCALSTACK https://www.localstack.cloud/pricing
-  # Useful localstack tier, Ultimate, is too pricey, while the free one, Hobby, does not have much services enabled.
-  # Using it here for s3, but until the real need arises(eg. cost of testing directly on AWS raises higher that LocalStack Ultimate tier) will prefer local/AWS over LocalStack.
-  # AWS S3-compatible local storage
-  # ==========================================================
-
-  dez_project_localstack:
-    image: localstack/localstack:4.10
-    container_name: osint-localstack
-
-    ports:
-      - "4566:4566"
-
-    environment:
-      SERVICES: s3
-      DEBUG: "0"
-      PERSISTENCE: "1"
-      AWS_DEFAULT_REGION: us-east-1
-
-    volumes:
-      - localstack_data:/var/lib/localstack
-      - ./localstack/init:/etc/localstack/init/ready.d
-      - /var/run/docker.sock:/var/run/docker.sock
-
-    networks:
-      - osint
-
-
   # ==========================================================
   # POSTGRES
   # Airflow metadata database
   # ==========================================================
 
-  dez_project_postgres:
+  dezm2h_airflow_postgres:
     image: postgres:16
     container_name: osint-postgres
 
@@ -64,7 +34,7 @@ services:
   # AIRFLOW 3 INIT
   # ==========================================================
 
-  dez_project_airflow-init:
+  dezm2h_airflow-init:
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -72,7 +42,7 @@ services:
     container_name: osint-airflow-init
 
     depends_on:
-      postgres:
+      dezm2h_airflow_postgres:
         condition: service_healthy
 
     environment:
@@ -128,7 +98,7 @@ services:
   # AIRFLOW 3 API SERVER
   # ==========================================================
 
-  dez_project_airflow-apiserver:
+  dezm2h_airflow-apiserver:
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -136,7 +106,7 @@ services:
     container_name: osint-airflow
 
     depends_on:
-      airflow-init:
+      dezm2h_airflow-init:
         condition: service_completed_successfully
 
     environment:
@@ -164,12 +134,11 @@ services:
     networks:
       - osint
 
-
   # ==========================================================
   # AIRFLOW 3 SCHEDULER
   # ==========================================================
 
-  dez_project_airflow-scheduler:
+  dezm2h_airflow-scheduler:
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -177,7 +146,7 @@ services:
     container_name: osint-airflow-scheduler
 
     depends_on:
-      airflow-init:
+      dezm2h_airflow-init:
         condition: service_completed_successfully
 
     environment:
@@ -202,12 +171,11 @@ services:
     networks:
       - osint
 
-
   # ==========================================================
   # AIRFLOW 3 DAG PROCESSOR
   # ==========================================================
 
-  dez_project_airflow-dag-processor:
+  dezm2h_airflow-dag-processor:
     build:
       context: ./airflow
       dockerfile: Dockerfile
@@ -215,7 +183,7 @@ services:
     container_name: osint-airflow-dag-processor
 
     depends_on:
-      airflow-init:
+      dezm2h_airflow-init:
         condition: service_completed_successfully
 
     environment:
@@ -240,145 +208,75 @@ services:
     networks:
       - osint
 
-
   # ==========================================================
-  # APACHE KAFKA 4
-  # KRaft - no ZooKeeper
+  # POSTGRES
+  # Homework database
   # ==========================================================
 
-  dez_project_kafka:
-    image: apache/kafka:4.0.2
-    container_name: osint-kafka
-
-    ports:
-      - "9092:9092"
-      - "29092:29092"
+  dezm2h_postgres:
+    image: postgres:18
+    container_name: homework-postgres
 
     environment:
-
-      KAFKA_NODE_ID: 1
-
-      KAFKA_PROCESS_ROLES: broker,controller
-
-      KAFKA_LISTENERS: >-
-        PLAINTEXT://0.0.0.0:9092,
-        EXTERNAL://0.0.0.0:29092,
-        CONTROLLER://0.0.0.0:9093
-
-      KAFKA_ADVERTISED_LISTENERS: >-
-        PLAINTEXT://kafka:9092,
-        EXTERNAL://localhost:29092
-
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >-
-        PLAINTEXT:PLAINTEXT,
-        EXTERNAL:PLAINTEXT,
-        CONTROLLER:PLAINTEXT
-
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-      KAFKA_NUM_PARTITIONS: 3
-
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
-    volumes:
-      - kafka_data:/tmp/kraft-combined-logs
-
-    networks:
-      - osint
-
-
-  # ==========================================================
-  # APACHE SPARK MASTER
-  # ==========================================================
-
-  dez_project_spark-master:
-    image: apache/spark:4.0.4
-    container_name: osint-spark-master
-
-    command:
-      - /bin/bash
-      - -c
-      - |
-        /opt/spark/sbin/start-master.sh
-        tail -f /dev/null
-
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    
     ports:
-      - "8080:8080"
-      - "7077:7077"
+      - "5432:5432"
 
     volumes:
-      - ./spark/jobs:/opt/spark/jobs
+      - postgres_data:/var/lib/postgresql
 
     networks:
-      - osint
-
-
-  # ==========================================================
-  # APACHE SPARK WORKER
-  # ==========================================================
-
-  dez_project_spark-worker:
-    image: apache/spark:4.0.4
-    container_name: osint-spark-worker
+      - homework
 
     depends_on:
-      - spark-master
+      dezm2h_airflow:
+        condition: service_started
 
-    command:
-      - /bin/bash
-      - -c
-      - |
-        /opt/spark/sbin/start-worker.sh spark://spark-master:7077
-        tail -f /dev/null
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
 
+  # ==========================================================
+  # PGADMIN
+  # ==========================================================
+
+  dezm2h_pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
     environment:
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 2G
-
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "8082:8081"
-
+      - "8082:80"
     volumes:
-      - ./spark/jobs:/opt/spark/jobs
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - dezm2h_postgres
+    restart: unless-stopped
 
     networks:
-      - osint
+      - homework
 
-  # ==========================================================
-  # DUCKDB
-  # BigQuery equivalent
-  # ==========================================================
-
-  dez_project_duckdb:
-    image: duckdb/duckdb:1.4.1
-    container_name: osint-duckdb
-    stdin_open: true # Keeps the standard input open (equivalent to -i)
-    tty: true        # Allocates a pseudo-TTY (equivalent to -t)
-    volumes:
-      - ./duckdb:/data
-    working_dir: /data
-
-    networks:
-      - osint
+  # # ==========================================================
+  # # HOMEWORKS
+  # # ==========================================================
 
 # ==========================================================
 # NETWORK
 # ==========================================================
 
 networks:
-  osint:
+  homework:
     driver: bridge
 
 
@@ -387,6 +285,8 @@ networks:
 # ==========================================================
 
 volumes:
-  localstack_data:
   postgres_data:
-  kafka_data:
+  pgadmin_data:
+  kestra_postgres_data:
+  kestra_data:
+  kestra_tmp:
