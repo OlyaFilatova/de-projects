@@ -38,3 +38,10 @@ curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/
 ### How many rows are there for the `Yellow` Taxi data for the March 2021 CSV file?
 
 ### How would you configure the timezone to New York in a Schedule trigger?
+
+
+## Useful commands
+
+```sh
+docker compose -f docker-compose.homework.yml exec dezm2h_airflow-scheduler airflow dags list-import-errors
+```

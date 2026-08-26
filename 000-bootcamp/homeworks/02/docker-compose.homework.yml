@@ -1,5 +1,31 @@
 services:
   # ==========================================================
+  # LOCALSTACK
+  # ==========================================================
+
+  dezm2h_localstack:
+    image: localstack/localstack:4.10
+
+    ports:
+      - "4566:4566"
+
+    environment:
+      SERVICES: s3
+      DEBUG: "0"
+      PERSISTENCE: "1"
+      AWS_DEFAULT_REGION: us-east-1
+
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./localstack/init:/etc/localstack/init/ready.d
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      homework:
+        aliases:
+          - localhost.localstack.cloud
+
+  # ==========================================================
   # POSTGRES
   # Airflow metadata database
   # ==========================================================
@@ -38,16 +64,24 @@ services:
 
   dezm2h_airflow-init:
     build:
-      context: ./flows/module_redo_airflow
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./flows/module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow_postgres:
+        condition: service_healthy
+      dezm2h_postgres:
         condition: service_healthy
 
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
         postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+
+      HOMEWORK_POSTGRES_HOST: dezm2h_postgres
+      HOMEWORK_POSTGRES_PORT: 5432
+      HOMEWORK_POSTGRES_DB: ${POSTGRES_DB}
+      HOMEWORK_POSTGRES_USER: ${POSTGRES_USER}
+      HOMEWORK_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -100,8 +134,8 @@ services:
 
   dezm2h_airflow-apiserver:
     build:
-      context: ./flows/module_redo_airflow
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./flows/module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow-init:
@@ -110,6 +144,12 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
         postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+      
+      AIRFLOW_CONN_HOMEWORK_POSTGRES: >-
+        postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dezm2h_postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW_CONN_LOCALSTACK: >-
+        aws://test:test@/?endpoint_url=http%3A%2F%2Flocalhost.localstack.cloud%3A4566&region_name=eu-central-1
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -139,8 +179,8 @@ services:
 
   dezm2h_airflow-scheduler:
     build:
-      context: ./flows/module_redo_airflow
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./flows/module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow-init:
@@ -149,6 +189,12 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
         postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+      
+      AIRFLOW_CONN_HOMEWORK_POSTGRES: >-
+        postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dezm2h_postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW_CONN_LOCALSTACK: >-
+        aws://test:test@/?endpoint_url=http%3A%2F%2Flocalhost.localstack.cloud%3A4566&region_name=eu-central-1
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -179,8 +225,8 @@ services:
 
   dezm2h_airflow-dag-processor:
     build:
-      context: ./flows/module_redo_airflow
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./flows/module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow-init:
@@ -189,6 +235,12 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
         postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+      
+      AIRFLOW_CONN_HOMEWORK_POSTGRES: >-
+        postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@dezm2h_postgres:5432/${POSTGRES_DB}
+
+      AIRFLOW_CONN_LOCALSTACK: >-
+        aws://test:test@/?endpoint_url=http%3A%2F%2Fdezm2_localstack%3A4566&region_name=eu-central-1
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -230,10 +282,6 @@ services:
     networks:
       - homework
 
-    depends_on:
-      dezm2h_airflow-dag-processor:
-        condition: service_started
-
     healthcheck:
       test:
         [
@@ -265,10 +313,6 @@ services:
     networks:
       - homework
 
-  # # ==========================================================
-  # # HOMEWORKS
-  # # ==========================================================
-
 # ==========================================================
 # NETWORK
 # ==========================================================
@@ -286,3 +330,4 @@ volumes:
   airflow_postgres_data:
   homework_postgres_data:
   pgadmin_data:
+  localstack_data:

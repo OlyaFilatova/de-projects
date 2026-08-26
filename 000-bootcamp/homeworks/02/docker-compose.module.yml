@@ -1,5 +1,31 @@
 services:
   # ==========================================================
+  # LOCALSTACK
+  # ==========================================================
+
+  dezm2_localstack:
+    image: localstack/localstack:4.10
+
+    ports:
+      - "4566:4566"
+
+    environment:
+      SERVICES: s3
+      DEBUG: "0"
+      PERSISTENCE: "1"
+      AWS_DEFAULT_REGION: us-east-1
+
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./localstack/init:/etc/localstack/init/ready.d
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      module_follow:
+        aliases:
+          - localhost.localstack.cloud
+
+  # ==========================================================
   # KESTRA POSTGRES
   # ==========================================================
 
@@ -27,29 +53,6 @@ services:
 
     networks:
       - module_follow
-
-  dezm2_localstack:
-    image: localstack/localstack:4.10
-
-    ports:
-      - "4566:4566"
-
-    environment:
-      SERVICES: s3
-      DEBUG: "0"
-      PERSISTENCE: "1"
-      AWS_DEFAULT_REGION: us-east-1
-
-    volumes:
-      - localstack_data:/var/lib/localstack
-      - ./localstack/init:/etc/localstack/init/ready.d
-      - /var/run/docker.sock:/var/run/docker.sock
-
-    networks:
-      module_follow:
-        aliases:
-          - localhost.localstack.cloud
-
 
   # ==========================================================
   # KESTRA

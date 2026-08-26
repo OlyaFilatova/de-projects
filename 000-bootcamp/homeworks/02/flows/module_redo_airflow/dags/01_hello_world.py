@@ -28,16 +28,16 @@ def hello_world():
 
     @task
     def generate_output():
-        return "I was generated during this Hello World workflow"
+      return "I was generated during this Hello World workflow"
 
     @task
     def sleep():
-        import time
-        time.sleep(15)
+      import time
+      time.sleep(15)
 
     @task
     def log_output(output: str):
-        print(f"This is an output: {output}")
+      print(f"This is an output: {output}")
 
     @task
     def goodbye_message():
