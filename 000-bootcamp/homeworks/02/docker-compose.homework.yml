@@ -266,7 +266,7 @@ services:
   # ==========================================================
 
   dezm2h_postgres:
-    image: postgres:18
+    image: pgvector/pgvector:pg18
 
     environment:
       POSTGRES_USER: ${POSTGRES_USER}

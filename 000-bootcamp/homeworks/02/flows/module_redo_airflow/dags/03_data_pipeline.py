@@ -1,11 +1,18 @@
 from datetime import datetime
+from pathlib import Path
 
 from airflow.sdk import dag, task, Param
 from pandas import DataFrame
 
+from lib.load_json import load_json
+
+DAG_DIR = Path(__file__).resolve().parent
+sql_create_products_table_path = DAG_DIR / "include/sql/03_01_create_products.sql"
+sql_select_products_path =  DAG_DIR / "include/sql/03_02_select_products.sql"
+
 
 @dag(
-  dag_id="03_data_pipeline_1",
+  dag_id="03_data_pipeline",
   start_date=datetime(2024, 1, 1),
   schedule=None,
   catchup=False,
@@ -18,18 +25,9 @@ from pandas import DataFrame
   }
 )
 def data_pipeline():
-
   @task
   def extract():
-    import requests
-
-    response = requests.get(
-      "https://dummyjson.com/products",
-      timeout=30,
-    )
-    response.raise_for_status()
-
-    return response.json()
+    return load_json("https://dummyjson.com/products")
 
   @task
   def get_columns_to_keep(**kwargs) -> list[str]:
@@ -43,51 +41,37 @@ def data_pipeline():
     data: dict,
     columns_to_keep: list[str] = ["brand", "price"],
   ):
-    import pandas as pd
+    from lib.products_transform import transform_products
 
-    return pd.DataFrame([
-      {
-        column: product.get(column, "N/A")
-        for column in columns_to_keep
-      }
-      for product in data["products"]
-    ])
+    return transform_products(data, columns_to_keep)
 
   @task.virtualenv(
     system_site_packages=False,
     requirements=["duckdb", "pandas", "pyarrow"],
   )
-  def query(df: DataFrame):
-    import duckdb
+  def query(
+    df: DataFrame,
+    sql_create_products_table_path: Path,
+    sql_select_products_path: Path
+  ):
+    from lib.products_duckdb import select_products
 
-    connection = duckdb.connect()
+    sql_create_products_table = sql_create_products_table_path.read_text()
+    sql_select_products = sql_select_products_path.read_text()
 
-    connection.execute(
-      """
-      CREATE TABLE products AS
-      SELECT * FROM df
-      """
+    return select_products(
+      df,
+      sql_create_products_table,
+      sql_select_products
     )
-
-    result = connection.execute(
-      """
-      SELECT
-        brand,
-        ROUND(AVG(price), 2) AS avg_price
-      FROM products
-      GROUP BY brand
-      ORDER BY avg_price DESC
-      """
-    ).fetchall()
-
-    connection.close()
-
-    return result
 
   data = extract()
   columns = get_columns_to_keep()
   products = transform(data, columns)
-  query(products)
-
+  query(
+    products,
+    sql_create_products_table_path,
+    sql_select_products_path
+  )
 
 data_pipeline()

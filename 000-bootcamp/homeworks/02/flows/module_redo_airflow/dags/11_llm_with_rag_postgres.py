@@ -6,7 +6,7 @@ from airflow.sdk import dag, task
 from pendulum import datetime
 
 from lib.ollama import chat, embed
-from lib.rag_duckdb import create_vector_store, retrieve
+from lib.rag_postgres import upsert_chunks, retrieve
 
 
 OLLAMA_URL = "http://host.docker.internal:11434"
@@ -14,13 +14,16 @@ OLLAMA_URL = "http://host.docker.internal:11434"
 CHAT_MODEL = "qwen3:8b"
 EMBEDDING_MODEL = "embeddinggemma"
 
+POSTGRES_CONN_ID = "homework_postgres"
+
+VECTOR_TABLE = "release_notes"
+
+DOCUMENT_ID = "kestra-1.1-release-notes"
+
 RELEASE_NOTES_URL = (
   "https://raw.githubusercontent.com/kestra-io/docs/"
   "refs/heads/main/src/contents/blogs/release-1-1/index.md"
 )
-
-DUCKDB_PATH = "/tmp/rag.duckdb"
-VECTOR_TABLE = "release_notes"
 
 PROMPT = """
 Which features were released in Kestra 1.1?
@@ -29,11 +32,17 @@ Please list at least 5 major features with brief descriptions.
 
 
 @dag(
-  dag_id="10_chat_with_rag",
+  dag_id="11_chat_with_rag_postgres",
   start_date=datetime(2024, 1, 1),
   schedule=None,
   catchup=False,
-  tags=["ai", "rag", "ollama", "duckdb"],
+  tags=[
+    "ai",
+    "rag",
+    "ollama",
+    "postgres",
+    "pgvector",
+  ],
 )
 def chat_with_rag():
 
@@ -44,13 +53,18 @@ def chat_with_rag():
       RELEASE_NOTES_URL,
       timeout=30,
     )
+
     response.raise_for_status()
 
     document = response.text
 
     chunks = [
       document[i:i + 1500]
-      for i in range(0, len(document), 1500)
+      for i in range(
+        0,
+        len(document),
+        1500,
+      )
     ]
 
     embeddings = [
@@ -62,11 +76,17 @@ def chat_with_rag():
       for chunk in chunks
     ]
 
-    create_vector_store(
-      db_path=DUCKDB_PATH,
+    upsert_chunks(
+      conn_id=POSTGRES_CONN_ID,
       table=VECTOR_TABLE,
-      documents=chunks,
+      document_id=DOCUMENT_ID,
+      source_url=RELEASE_NOTES_URL,
+      chunks=chunks,
       embeddings=embeddings,
+    )
+
+    print(
+      f"Ingested {len(chunks)} chunks"
     )
 
     return len(chunks)
@@ -80,20 +100,31 @@ def chat_with_rag():
       text=PROMPT,
     )
 
-    return retrieve(
-      db_path=DUCKDB_PATH,
+    context = retrieve(
+      conn_id=POSTGRES_CONN_ID,
       table=VECTOR_TABLE,
       query_embedding=query_embedding,
       limit=5,
     )
 
-  @task
-  def query_llm(context: list[str]) -> str:
+    print(
+      f"Retrieved {len(context)} chunks"
+    )
 
-    context_text = "\n\n---\n\n".join(context)
+    return context
+
+  @task
+  def query_llm(
+    context: list[str],
+  ) -> str:
+
+    context_text = "\n\n---\n\n".join(
+      context
+    )
 
     prompt = f"""
-Use the following Kestra 1.1 release notes to answer the question.
+Use the following Kestra 1.1 release notes
+to answer the question.
 
 Context:
 {context_text}
@@ -102,7 +133,9 @@ Question:
 {PROMPT}
 
 Answer using only the provided context.
-List at least 5 major features with brief descriptions.
+
+List at least 5 major features with brief
+descriptions.
 """
 
     return chat(
@@ -113,8 +146,14 @@ List at least 5 major features with brief descriptions.
     )
 
   @task
-  def log_results(response: str):
-    print("Response with RAG:")
+  def log_results(
+      response: str,
+  ) -> None:
+
+    print(
+      "Response with RAG:"
+    )
+
     print(response)
 
   ingestion = ingest_release_notes()

@@ -1,0 +1,2 @@
+CREATE TABLE products AS
+SELECT * FROM df
