@@ -26,7 +26,7 @@ services:
       retries: 10
 
     networks:
-      - homework
+      - module_follow
 
   dezm2_localstack:
     image: localstack/localstack:4.10
@@ -46,7 +46,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
     networks:
-      homework:
+      module_follow:
         aliases:
           - localhost.localstack.cloud
 
@@ -110,11 +110,11 @@ services:
         condition: service_started
 
     networks:
-      - homework
+      - module_follow
 
   # ==========================================================
   # POSTGRES
-  # Homework database
+  # orchestrated database
   # ==========================================================
 
   dezm2_postgres:
@@ -132,7 +132,7 @@ services:
       - postgres_data:/var/lib/postgresql
 
     networks:
-      - homework
+      - module_follow
 
     depends_on:
       dezm2_kestra:
@@ -167,14 +167,14 @@ services:
     restart: unless-stopped
 
     networks:
-      - homework
+      - module_follow
 
 # ==========================================================
 # NETWORK
 # ==========================================================
 
 networks:
-  homework:
+  module_follow:
     driver: bridge
 
 

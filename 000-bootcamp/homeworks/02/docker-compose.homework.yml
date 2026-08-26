@@ -5,25 +5,27 @@ services:
   # ==========================================================
 
   dezm2h_airflow_postgres:
-    image: postgres:16
-    container_name: osint-postgres
+    image: postgres:18
 
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${AIRFLOW_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
 
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - airflow_postgres_data:/var/lib/postgresql
 
     networks:
-      - osint
+      - homework
+    
+    ports:
+      - "5433:5432"
 
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          "pg_isready -U ${AIRFLOW_POSTGRES_USER} -d ${AIRFLOW_POSTGRES_DB}"
         ]
       interval: 5s
       timeout: 5s
@@ -36,10 +38,8 @@ services:
 
   dezm2h_airflow-init:
     build:
-      context: ./airflow
+      context: ./flows/module_redo_airflow
       dockerfile: Dockerfile
-
-    container_name: osint-airflow-init
 
     depends_on:
       dezm2h_airflow_postgres:
@@ -47,7 +47,7 @@ services:
 
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
-        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -57,9 +57,9 @@ services:
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
 
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
+      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
+      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
+      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
 
     entrypoint: /bin/bash
 
@@ -91,7 +91,7 @@ services:
         echo "======================================"
 
     networks:
-      - osint
+      - homework
 
 
   # ==========================================================
@@ -100,10 +100,8 @@ services:
 
   dezm2h_airflow-apiserver:
     build:
-      context: ./airflow
+      context: ./flows/module_redo_airflow
       dockerfile: Dockerfile
-
-    container_name: osint-airflow
 
     depends_on:
       dezm2h_airflow-init:
@@ -111,7 +109,7 @@ services:
 
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
-        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -119,11 +117,12 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
 
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
 
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
+      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
+      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
+      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
 
     ports:
       - "8081:8080"
@@ -132,7 +131,7 @@ services:
       - api-server
 
     networks:
-      - osint
+      - homework
 
   # ==========================================================
   # AIRFLOW 3 SCHEDULER
@@ -140,10 +139,8 @@ services:
 
   dezm2h_airflow-scheduler:
     build:
-      context: ./airflow
+      context: ./flows/module_redo_airflow
       dockerfile: Dockerfile
-
-    container_name: osint-airflow-scheduler
 
     depends_on:
       dezm2h_airflow-init:
@@ -151,7 +148,7 @@ services:
 
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
-        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -159,17 +156,22 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
 
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+
+      AIRFLOW__API__BASE_URL: http://dezm2h_airflow-apiserver:8080
+
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://dezm2h_airflow-apiserver:8080/execution/
 
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
+      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
+      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
+      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
 
     command:
       - scheduler
 
     networks:
-      - osint
+      - homework
 
   # ==========================================================
   # AIRFLOW 3 DAG PROCESSOR
@@ -177,10 +179,8 @@ services:
 
   dezm2h_airflow-dag-processor:
     build:
-      context: ./airflow
+      context: ./flows/module_redo_airflow
       dockerfile: Dockerfile
-
-    container_name: osint-airflow-dag-processor
 
     depends_on:
       dezm2h_airflow-init:
@@ -188,7 +188,7 @@ services:
 
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
-        postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm2h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
 
       AIRFLOW__CORE__AUTH_MANAGER: >-
         airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -198,15 +198,15 @@ services:
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
 
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
+      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
+      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
+      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
 
     command:
       - dag-processor
 
     networks:
-      - osint
+      - homework
 
   # ==========================================================
   # POSTGRES
@@ -215,7 +215,6 @@ services:
 
   dezm2h_postgres:
     image: postgres:18
-    container_name: homework-postgres
 
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -226,13 +225,13 @@ services:
       - "5432:5432"
 
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - homework_postgres_data:/var/lib/postgresql
 
     networks:
       - homework
 
     depends_on:
-      dezm2h_airflow:
+      dezm2h_airflow-dag-processor:
         condition: service_started
 
     healthcheck:
@@ -251,7 +250,6 @@ services:
 
   dezm2h_pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
@@ -285,8 +283,6 @@ networks:
 # ==========================================================
 
 volumes:
-  postgres_data:
+  airflow_postgres_data:
+  homework_postgres_data:
   pgadmin_data:
-  kestra_postgres_data:
-  kestra_data:
-  kestra_tmp:
