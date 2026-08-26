@@ -2,10 +2,7 @@ from airflow.sdk import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from pendulum import datetime
 
-
-BUCKET_NAME = "bucket1"
-BUCKET_REGION = "eu-central-1"
-AWS_CONN_ID = "localstack"
+from config.s3 import BUCKET_NAME, BUCKET_REGION, AWS_CONN_ID
 
 
 @dag(

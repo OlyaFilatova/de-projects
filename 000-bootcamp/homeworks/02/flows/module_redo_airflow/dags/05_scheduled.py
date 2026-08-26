@@ -2,12 +2,11 @@ from datetime import datetime
 
 from airflow.sdk import dag, get_current_context, task, Param
 
+from config.taxi import DATA_URL
+from config.postgres import POSTGRES_CONN_ID
+
 from lib.download_taxi_csv import download_taxi_data
 from lib.taxi_postgres import load_taxi_data
-from config.taxi import DATA_URL
-
-
-POSTGRES_CONN_ID = "homework_postgres"
 
 
 def create_taxi_dag(dag_id: str, cron: str, taxi: str):

@@ -1,16 +1,9 @@
 from airflow.sdk import dag, task
 from pendulum import datetime
 
+from config.ollama import OLLAMA_URL, CHAT_MODEL, PROMPT
+
 from lib.ollama import chat
-
-
-OLLAMA_URL="http://host.docker.internal:11434"
-OLLAMA_MODEL="qwen3:8b"
-
-PROMPT = """
-Which features were released in Kestra 1.1?
-Please list at least 5 major features with brief descriptions.
-"""
 
 
 @dag(
@@ -26,7 +19,7 @@ def chat_without_rag():
   def chat_task() -> str:
     return chat(
       url=OLLAMA_URL,
-      model=OLLAMA_MODEL,
+      model=CHAT_MODEL,
       prompt=PROMPT,
       think=True,
     )

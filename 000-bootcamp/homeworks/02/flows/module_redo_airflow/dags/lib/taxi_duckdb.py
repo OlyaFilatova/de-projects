@@ -1,12 +1,11 @@
 import duckdb
 
 from config.taxi import TAXI_DUCKDB_CONFIG
+from config.s3 import BUCKET_REGION, AWS_ENDPOINT
 
 
 DUCKDB_PATH = "/tmp/tripdata.duckdb"
 
-BUCKET_REGION = "eu-central-1"
-AWS_ENDPOINT = "localhost.localstack.cloud"
 
 def configure_s3(conn) -> None:
   conn.execute("INSTALL httpfs")

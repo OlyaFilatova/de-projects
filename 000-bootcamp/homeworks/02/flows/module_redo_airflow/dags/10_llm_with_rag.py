@@ -5,27 +5,13 @@ import requests
 from airflow.sdk import dag, task
 from pendulum import datetime
 
+from config.ollama import OLLAMA_URL, CHAT_MODEL, EMBEDDING_MODEL, RAG_PROMPT, VECTOR_TABLE, RELEASE_NOTES_URL, PROMPT
+
 from lib.ollama import chat, embed
 from lib.rag_duckdb import create_vector_store, retrieve
 
 
-OLLAMA_URL = "http://host.docker.internal:11434"
-
-CHAT_MODEL = "qwen3:8b"
-EMBEDDING_MODEL = "embeddinggemma"
-
-RELEASE_NOTES_URL = (
-  "https://raw.githubusercontent.com/kestra-io/docs/"
-  "refs/heads/main/src/contents/blogs/release-1-1/index.md"
-)
-
 DUCKDB_PATH = "/tmp/rag.duckdb"
-VECTOR_TABLE = "release_notes"
-
-PROMPT = """
-Which features were released in Kestra 1.1?
-Please list at least 5 major features with brief descriptions.
-"""
 
 
 @dag(
@@ -92,18 +78,10 @@ def chat_with_rag():
 
     context_text = "\n\n---\n\n".join(context)
 
-    prompt = f"""
-Use the following Kestra 1.1 release notes to answer the question.
-
-Context:
-{context_text}
-
-Question:
-{PROMPT}
-
-Answer using only the provided context.
-List at least 5 major features with brief descriptions.
-"""
+    prompt = RAG_PROMPT.format(
+      context_text=context_text,
+      prompt=PROMPT
+    )
 
     return chat(
       url=OLLAMA_URL,

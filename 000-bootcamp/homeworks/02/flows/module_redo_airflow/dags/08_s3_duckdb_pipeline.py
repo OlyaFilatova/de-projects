@@ -3,16 +3,14 @@ from pathlib import Path
 from airflow.sdk import dag, task
 from pendulum import datetime
 
-from lib.download_and_unzip import download_and_unzip
-from lib.upload_s3 import upload as upload_s3
-
-from lib.taxi_duckdb import load_from_s3
 from config.params import taxi as taxi_param, year as year_param, month as month_param
+from config.s3 import BUCKET_NAME, AWS_CONN_ID
 from config.taxi import DATA_URL
 
+from lib.download_and_unzip import download_and_unzip
+from lib.upload_s3 import upload as upload_s3
+from lib.taxi_duckdb import load_from_s3
 
-BUCKET_NAME = "bucket1"
-AWS_CONN_ID = "localstack"
 
 @dag(
   dag_id="08_s3_duckdb_pipeline",

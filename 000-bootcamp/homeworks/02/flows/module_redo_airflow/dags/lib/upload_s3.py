@@ -1,4 +1,3 @@
-
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 def upload(filename, local_path, aws_conn_id, bucket_name):

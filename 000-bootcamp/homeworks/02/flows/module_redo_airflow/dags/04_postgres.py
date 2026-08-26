@@ -2,13 +2,12 @@ from datetime import datetime
 
 from airflow.sdk import dag, task
 
-from lib.download_taxi_csv import download_taxi_data
-from lib.taxi_postgres import load_taxi_data
 from config.params import taxi as taxi_param, year as year_param, month as month_param
+from config.postgres import POSTGRES_CONN_ID
 from config.taxi import DATA_URL
 
-
-POSTGRES_CONN_ID = "homework_postgres"
+from lib.download_taxi_csv import download_taxi_data
+from lib.taxi_postgres import load_taxi_data
 
 
 @dag(
