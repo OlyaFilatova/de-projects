@@ -65,7 +65,7 @@ services:
   dezm2h_airflow-init:
     build:
       context: .
-      dockerfile: ./flows/module_redo_airflow/Dockerfile
+      dockerfile: ./module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow_postgres:
@@ -91,9 +91,9 @@ services:
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
 
     volumes:
-      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
-      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
-      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
+      - ./module_redo_airflow/dags:/opt/airflow/dags
+      - ./module_redo_airflow/logs:/opt/airflow/logs
+      - ./module_redo_airflow/plugins:/opt/airflow/plugins
 
     entrypoint: /bin/bash
 
@@ -135,7 +135,7 @@ services:
   dezm2h_airflow-apiserver:
     build:
       context: .
-      dockerfile: ./flows/module_redo_airflow/Dockerfile
+      dockerfile: ./module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow-init:
@@ -160,9 +160,9 @@ services:
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
 
     volumes:
-      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
-      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
-      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
+      - ./module_redo_airflow/dags:/opt/airflow/dags
+      - ./module_redo_airflow/logs:/opt/airflow/logs
+      - ./module_redo_airflow/plugins:/opt/airflow/plugins
 
     ports:
       - "8081:8080"
@@ -180,7 +180,7 @@ services:
   dezm2h_airflow-scheduler:
     build:
       context: .
-      dockerfile: ./flows/module_redo_airflow/Dockerfile
+      dockerfile: ./module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow-init:
@@ -209,9 +209,9 @@ services:
       AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://dezm2h_airflow-apiserver:8080/execution/
 
     volumes:
-      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
-      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
-      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
+      - ./module_redo_airflow/dags:/opt/airflow/dags
+      - ./module_redo_airflow/logs:/opt/airflow/logs
+      - ./module_redo_airflow/plugins:/opt/airflow/plugins
 
     command:
       - scheduler
@@ -226,7 +226,7 @@ services:
   dezm2h_airflow-dag-processor:
     build:
       context: .
-      dockerfile: ./flows/module_redo_airflow/Dockerfile
+      dockerfile: ./module_redo_airflow/Dockerfile
 
     depends_on:
       dezm2h_airflow-init:
@@ -250,9 +250,9 @@ services:
       AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
 
     volumes:
-      - ./flows/module_redo_airflow/dags:/opt/airflow/dags
-      - ./flows/module_redo_airflow/logs:/opt/airflow/logs
-      - ./flows/module_redo_airflow/plugins:/opt/airflow/plugins
+      - ./module_redo_airflow/dags:/opt/airflow/dags
+      - ./module_redo_airflow/logs:/opt/airflow/logs
+      - ./module_redo_airflow/plugins:/opt/airflow/plugins
 
     command:
       - dag-processor
