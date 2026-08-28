@@ -20,10 +20,22 @@ curl -X POST -u 'admin@kestra.io:Admin1234!' http://localhost:8080/api/v1/flows/
 `docker compose -f docker-compose.homework.yml up`
 
 DAGs are automatically loaded into Airflow. Use UI to run them.
+- 01_hello_world
+- 02_python
+- 03_data_pipeline
+- 04_postgres
+- 05_scheduled
+- 07_s3_create_bucket
+- 08_s3_duckdb_pipeline
+- 09_llm
+- 10_llm_with_rag
+- 11_llm_with_rag_postgres
 
 ## Module 2 Homework
 
 `docker compose -f docker-compose.homework.yml up`
+
+DAGs are automatically loaded into Airflow. Use UI to run them.
 
 `https://github.com/DataTalksClub/nyc-tlc-data/releases/tag/green/download`
 
@@ -31,20 +43,34 @@ DAGs are automatically loaded into Airflow. Use UI to run them.
 
 ## Exercises
 
-(?Kestra)
+### 1. Within the execution for `Yellow` Taxi data for the year `2020` and month `12`: what is the uncompressed file size (i.e. the output file `yellow_tripdata_2020-12.csv` of the `extract` task)?
 
-### Within the execution for `Yellow` Taxi data for the year `2020` and month `12`: what is the uncompressed file size (i.e. the output file `yellow_tripdata_2020-12.csv` of the `extract` task)?
+- 12_homework_1
 
-### What is the rendered value of the variable `file` when the inputs `taxi` is set to `green`, `year` is set to `2020`, and `month` is set to `04` during execution?
+### 2. What is the rendered value of the variable `file` when the inputs `taxi` is set to `green`, `year` is set to `2020`, and `month` is set to `04` during execution?
 
-### How many rows are there for the `Yellow` Taxi data for all CSV files in the year 2020?
+`"green_tripdata_2020-04.csv"`
 
-### How many rows are there for the `Green` Taxi data for all CSV files in the year 2020?
+### 3. How many rows are there for the `Yellow` Taxi data for all CSV files in the year 2020?
 
-### How many rows are there for the `Yellow` Taxi data for the March 2021 CSV file?
+- 14_homework_3
 
-### How would you configure the timezone to New York in a Schedule trigger?
+### 4. How many rows are there for the `Green` Taxi data for all CSV files in the year 2020?
 
+- 15_homework_4
+
+### 5. How many rows are there for the `Yellow` Taxi data for the March 2021 CSV file?
+
+- 16_homework_5
+
+### 6. How would you configure the timezone to New York in a Schedule trigger?
+
+```
+@dag(
+  ...
+  start_date=pendulum.datetime(2026, 1, 1, tz="America/New_York"),
+)
+```
 
 ## Useful commands
 

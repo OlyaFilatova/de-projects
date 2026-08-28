@@ -133,3 +133,25 @@ def load_from_s3(
 
   finally:
     conn.close()
+
+def row_count(
+  *,
+  files_path: str | list[str],
+) -> int:
+  conn = duckdb.connect(DUCKDB_PATH)
+
+  return conn.execute(
+    f"""
+    SELECT
+      COUNT(VendorID)
+    FROM read_csv_auto(
+      ?,
+      header = true,
+      auto_detect = true,
+      ignore_errors = false
+    )
+    """,
+    [
+      files_path,
+    ],
+  ).fetchone()[0]
