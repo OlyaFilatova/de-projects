@@ -1,0 +1,263 @@
+services:
+  # ==========================================================
+  # LOCALSTACK
+  # ==========================================================
+
+  dezm3h_localstack:
+    image: localstack/localstack:4.10
+
+    ports:
+      - "4566:4566"
+
+    environment:
+      SERVICES: s3
+      DEBUG: "0"
+      PERSISTENCE: "1"
+      AWS_DEFAULT_REGION: us-east-1
+
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./localstack/init:/etc/localstack/init/ready.d
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      homework_3:
+        aliases:
+          - localhost.localstack.cloud
+
+  # ==========================================================
+  # POSTGRES
+  # Airflow metadata database
+  # ==========================================================
+
+  dezm3h_airflow_postgres:
+    image: postgres:18
+
+    environment:
+      POSTGRES_USER: ${AIRFLOW_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AIRFLOW_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AIRFLOW_POSTGRES_DB}
+
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql
+
+    networks:
+      - homework_3
+    
+    ports:
+      - "5433:5432"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${AIRFLOW_POSTGRES_USER} -d ${AIRFLOW_POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  # ==========================================================
+  # AIRFLOW 3 INIT
+  # ==========================================================
+
+  dezm3h_airflow-init:
+    build:
+      context: .
+      dockerfile: ./orchestration/Dockerfile
+
+    depends_on:
+      dezm3h_airflow_postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm3h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags
+      - ./orchestration/logs:/opt/airflow/logs
+      - ./orchestration/plugins:/opt/airflow/plugins
+
+    entrypoint: /bin/bash
+
+    command:
+      - -c
+      - |
+        set -e
+
+        echo "======================================"
+        echo "Airflow database migration"
+        echo "======================================"
+
+        airflow db migrate
+
+        echo "======================================"
+        echo "Creating admin user"
+        echo "======================================"
+
+        airflow users create \
+          --username ${AIRFLOW_USER} \
+          --password ${AIRFLOW_PASSWORD} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true
+
+        echo "======================================"
+        echo "Airflow initialization complete"
+        echo "======================================"
+
+    networks:
+      - homework_3
+
+
+  # ==========================================================
+  # AIRFLOW 3 API SERVER
+  # ==========================================================
+
+  dezm3h_airflow-apiserver:
+    build:
+      context: .
+      dockerfile: ./orchestration/Dockerfile
+
+    depends_on:
+      dezm3h_airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm3h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+
+      AIRFLOW_CONN_LOCALSTACK: >-
+        aws://test:test@/?endpoint_url=http%3A%2F%2Flocalhost.localstack.cloud%3A4566&region_name=eu-central-1
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags
+      - ./orchestration/logs:/opt/airflow/logs
+      - ./orchestration/plugins:/opt/airflow/plugins
+
+    ports:
+      - "8081:8080"
+
+    command:
+      - api-server
+
+    networks:
+      - homework_3
+
+  # ==========================================================
+  # AIRFLOW 3 SCHEDULER
+  # ==========================================================
+
+  dezm3h_airflow-scheduler:
+    build:
+      context: .
+      dockerfile: ./orchestration/Dockerfile
+
+    depends_on:
+      dezm3h_airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm3h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+
+      AIRFLOW_CONN_LOCALSTACK: >-
+        aws://test:test@/?endpoint_url=http%3A%2F%2Flocalhost.localstack.cloud%3A4566&region_name=eu-central-1
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+
+      AIRFLOW__API__BASE_URL: http://dezm3h_airflow-apiserver:8080
+
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://dezm3h_airflow-apiserver:8080/execution/
+
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags
+      - ./orchestration/logs:/opt/airflow/logs
+      - ./orchestration/plugins:/opt/airflow/plugins
+
+    command:
+      - scheduler
+
+    networks:
+      - homework_3
+
+  # ==========================================================
+  # AIRFLOW 3 DAG PROCESSOR
+  # ==========================================================
+
+  dezm3h_airflow-dag-processor:
+    build:
+      context: .
+      dockerfile: ./orchestration/Dockerfile
+
+    depends_on:
+      dezm3h_airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@dezm3h_airflow_postgres:5432/${AIRFLOW_POSTGRES_DB}
+
+      AIRFLOW_CONN_LOCALSTACK: >-
+        aws://test:test@/?endpoint_url=http%3A%2F%2Fdezm2_localstack%3A4566&region_name=eu-central-1
+
+      AIRFLOW__CORE__AUTH_MANAGER: >-
+        airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+      AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags
+      - ./orchestration/logs:/opt/airflow/logs
+      - ./orchestration/plugins:/opt/airflow/plugins
+
+    command:
+      - dag-processor
+
+    networks:
+      - homework_3
+
+# ==========================================================
+# NETWORK
+# ==========================================================
+
+networks:
+  homework_3:
+    driver: bridge
+
+
+# ==========================================================
+# PERSISTENT VOLUMES
+# ==========================================================
+
+volumes:
+  airflow_postgres_data:
+  homework_3_postgres_data:
+  pgadmin_data:
+  localstack_data:

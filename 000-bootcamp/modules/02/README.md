@@ -37,10 +37,6 @@ DAGs are automatically loaded into Airflow. Use UI to run them.
 
 DAGs are automatically loaded into Airflow. Use UI to run them.
 
-`https://github.com/DataTalksClub/nyc-tlc-data/releases/tag/green/download`
-
-(`https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/`)
-
 ## Exercises
 
 ### 1. Within the execution for `Yellow` Taxi data for the year `2020` and month `12`: what is the uncompressed file size (i.e. the output file `yellow_tripdata_2020-12.csv` of the `extract` task)?
