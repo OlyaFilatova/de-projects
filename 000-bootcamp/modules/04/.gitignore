@@ -1,0 +1,6 @@
+orchestration/logs
+
+# Data directory
+data/
+
+*.duckdb
