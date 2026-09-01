@@ -4,3 +4,5 @@ orchestration/logs
 data/
 
 *.duckdb
+*.duckdb.tmp
+*.duckdb.wal

@@ -1,4 +1,22 @@
-# Module 4 Homework
+# Module 4
+
+## Links
+
+- https://docs.getdbt.com/docs/introduction?version=2
+- https://docs.getdbt.com/docs/build/projects?version=2
+- https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview?version=2
+- https://docs.getdbt.com/docs/build/sources?version=2
+- https://docs.getdbt.com/docs/build/sql-models?version=2
+- https://docs.getdbt.com/reference/dbt-jinja-functions/ref?version=2
+- https://docs.getdbt.com/docs/build/seeds?version=2
+- https://docs.getdbt.com/docs/build/jinja-macros?version=2
+- https://docs.getdbt.com/docs/build/documentation?version=2
+- https://docs.getdbt.com/reference/model-properties?version=2
+- https://docs.getdbt.com/docs/build/data-tests?version=2
+- https://docs.getdbt.com/docs/build/unit-tests?version=2
+- https://docs.getdbt.com/docs/mesh/govern/model-contracts?version=2
+- https://hub.getdbt.com/
+
 
 ## Exercises
 
@@ -16,6 +34,8 @@ models/
 ```
 
 If you run `dbt run --select int_trips_unioned`, what models will be built?
+
+>>> Answer
 
 ### 2. dbt Tests
 

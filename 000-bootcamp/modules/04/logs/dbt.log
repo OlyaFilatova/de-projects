@@ -94,3 +94,39 @@ https://docs.getdbt.com/docs/configure-your-profile
 [0m00:21:20.927109 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x107572780>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x107648ef0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10752e140>]}
 [0m00:21:20.927278 [debug] [MainThread]: Flushing usage events
 [0m00:21:21.470441 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m00:26:35.807823 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x103ee6e40>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10534f4d0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10534f750>]}
+
+
+============================== 00:26:35.809692 | a5dbc83e-3ce7-45ce-9b93-4534369bf8c5 ==============================
+[0m00:26:35.809692 [info ] [MainThread]: Running with dbt=1.12.3
+[0m00:26:35.809961 [debug] [MainThread]: running dbt with arguments {'log_format': 'default', 'use_colors': 'True', 'hints_enabled': 'True', 'target_path': 'None', 'warn_error': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'cache_selected_only': 'False', 'log_path': 'logs', 'maximum_seed_size_mib': '1', 'introspect': 'True', 'printer_width': '80', 'empty': 'None', 'debug': 'False', 'profiles_dir': '/Users/olhaopanasenko/.dbt', 'quiet': 'False', 'write_json': 'True', 'use_experimental_parser': 'False', 'log_cache_events': 'False', 'send_anonymous_usage_stats': 'True', 'fail_fast': 'False', 'static_parser': 'True', 'partial_parse': 'True', 'no_print': 'None', 'version_check': 'True', 'invocation_command': 'dbt init --project-dir .', 'indirect_selection': 'eager'}
+[0m00:26:49.894210 [debug] [MainThread]: Starter project path: /Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/include/starter_project
+[0m00:26:49.909862 [info ] [MainThread]: Setting up your profile.
+[0m00:26:55.402261 [error] [MainThread]: [[31mERROR[0m]: Encountered an error:
+
+[0m00:26:55.409651 [error] [MainThread]: Traceback (most recent call last):
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/cli/requires.py", line 198, in wrapper
+    result, success = func(*args, **kwargs)
+                      ~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/cli/requires.py", line 144, in wrapper
+    return func(*args, **kwargs)
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/cli/main.py", line 504, in init
+    results = task.run()
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/task/init.py", line 363, in run
+    self.setup_profile(profile_name)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/task/init.py", line 264, in setup_profile
+    adapter = self.ask_for_adapter_choice()
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/dbt/task/init.py", line 245, in ask_for_adapter_choice
+    numeric_choice = click.prompt(prompt_msg, type=click.INT)
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/click/termui.py", line 262, in prompt
+    value = prompt_func(prompt)
+  File "/Users/olhaopanasenko/GitHub/de-projects/000-bootcamp/modules/04/.venv/lib/python3.13/site-packages/click/termui.py", line 245, in prompt_func
+    raise Abort() from None
+click.exceptions.Abort
+
+[0m00:26:55.411418 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": false, "command_wall_clock_time": 19.637331, "process_in_blocks": "0", "process_kernel_time": 0.084059, "process_mem_max_rss": "123240448", "process_out_blocks": "0", "process_user_time": 0.548805}
+[0m00:26:55.412203 [debug] [MainThread]: Command `dbt init` failed at 00:26:55.412070 after 19.64 seconds
+[0m00:26:55.412757 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1054308a0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105445010>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105400050>]}
+[0m00:26:55.413334 [debug] [MainThread]: Flushing usage events
+[0m00:26:56.021215 [debug] [MainThread]: An error was encountered while trying to flush usage events

@@ -1,10 +1,10 @@
 module_4:
-  target: dev
+  target: prod
   outputs:
     # DuckDB Development profile
     dev:
       type: duckdb
-      path: taxi_rides_ny.duckdb
+      path: taxi_rides_ny_dev.duckdb
       schema: dev
       threads: 1
       extensions:

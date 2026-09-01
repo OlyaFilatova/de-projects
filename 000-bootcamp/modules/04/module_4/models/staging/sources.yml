@@ -1,5 +1,5 @@
 sources:
-  - name: nytaxi
+  - name: raw
     database: taxi_rides_ny # Or name of your GCP project
     schema: prod # Or name of your BigQuery dataset
     
