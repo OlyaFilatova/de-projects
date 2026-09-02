@@ -23,3 +23,7 @@ In the module_4 folder.
 `dbt debug --profiles-dir .`
 
 `dbt show --project-dir . --profiles-dir . --models stg_green_tripdata`
+
+`dbt run-operation generate_base_model --args '{"source_name": "raw", "table_name": "fhv_tripdata"}'`
+
+`dbt run-operation generate_model_yaml --args '{"model_names": ["stg_fhv_tripdata"]}'`
