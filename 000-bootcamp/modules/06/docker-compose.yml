@@ -2,6 +2,8 @@ services:
   spark-master:
     image: apache/spark:4.1.3-scala2.13-java17-python3-ubuntu
     hostname: spark-master
+    volumes:
+      - .:/workspace
     ports:
       - "7077:7077"
       - "8080:8080"
@@ -16,6 +18,8 @@ services:
     image: apache/spark:4.1.3-scala2.13-java17-python3-ubuntu
     depends_on:
       - spark-master
+    volumes:
+      - .:/workspace
     ports:
       - "8081:8081"
     command: >
@@ -23,3 +27,15 @@ services:
       org.apache.spark.deploy.worker.Worker
       spark://spark-master:7077
       --webui-port 8081
+
+  pyspark:
+    build: .
+    depends_on:
+      - spark-master
+      - spark-worker
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      PYSPARK_PYTHON: python3
+      PYSPARK_DRIVER_PYTHON: python3

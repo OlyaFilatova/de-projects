@@ -1,4 +1,61 @@
-# Module 6 Homework
+# Module 6 
+
+## Follow
+
+```sh
+docker compose up
+```
+
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/follow/03_test.py
+```
+
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/follow/04_pyspark.py
+```
+
+```sh
+sh ./download_data.sh yellow 2020
+sh ./download_data.sh yellow 2021
+sh ./download_data.sh green 2020
+sh ./download_data.sh green 2021
+```
+
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/follow/05_taxi_schema.py
+```
+
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/follow/06_spark_sql.py
+```
+
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/follow/07_groupby_join.py
+```
+
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/follow/08_rdds.py
+```
+
+## Homework
 
 In this homework we'll put what we learned about Spark in practice.
 
@@ -18,9 +75,14 @@ wget https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-11.par
 
 What's the output?
 
-> [!NOTE]
-> To install PySpark follow this [guide](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/06-batch/setup/)
+```sh
+docker compose run --rm pyspark \
+  /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /workspace/homework/01.py
+```
 
+>>> 4.1.3
 
 ## 2: Yellow November 2025
 
